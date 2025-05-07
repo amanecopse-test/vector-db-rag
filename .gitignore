@@ -30,3 +30,12 @@ coverage/
 *.coverage
 *.coverage.*
 coverage-final.json
+
+# Python virtual environment
+.venv/
+venv/
+ENV/
+env/
+*.pyc
+__pycache__/
+.pytest_cache/
