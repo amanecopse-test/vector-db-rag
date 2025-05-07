@@ -1,49 +1,51 @@
-import { describe, it, expect, test, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, renderWithSetup, screen } from 'shared-utils-test';
 import { TodoItem } from './TodoItem';
 import { Todo } from '../types/todo';
 
 describe('TodoItem', () => {
-  const mockTodo: Todo = {
+  const mockTodo = {
     id: 1,
-    text: '테스트 할일',
+    text: 'Test Todo',
     completed: false,
   };
 
-  test('할일 텍스트를 표시합니다', () => {
-    render(
-      <TodoItem
-        todo={mockTodo}
-        onToggle={() => {}}
-        onDelete={() => {}}
-      />
-    );
-    expect(screen.getByText('테스트 할일')).toBeInTheDocument();
+  test('할 일 항목이 올바르게 렌더링됩니다', () => {
+    render(<TodoItem todo={mockTodo} onToggle={() => {}} onDelete={() => {}} />);
+    expect(screen.getByText('Test Todo')).toBeInTheDocument();
   });
 
-  test('체크박스 클릭 시 onToggle이 호출됩니다', () => {
-    const handleToggle = vi.fn();
-    render(
-      <TodoItem
-        todo={mockTodo}
-        onToggle={handleToggle}
-        onDelete={() => {}}
-      />
-    );
-    fireEvent.click(screen.getByRole('checkbox'));
-    expect(handleToggle).toHaveBeenCalledWith(1);
+  test('완료된 할 일은 체크 표시가 됩니다', () => {
+    const completedTodo = { ...mockTodo, completed: true };
+    render(<TodoItem todo={completedTodo} onToggle={() => {}} onDelete={() => {}} />);
+    expect(screen.getByRole('checkbox')).toBeChecked();
   });
 
-  test('삭제 버튼 클릭 시 onDelete가 호출됩니다', () => {
-    const handleDelete = vi.fn();
-    render(
-      <TodoItem
-        todo={mockTodo}
-        onToggle={() => {}}
-        onDelete={handleDelete}
-      />
+  test('완료되지 않은 할 일은 체크 표시가 되지 않습니다', () => {
+    render(<TodoItem todo={mockTodo} onToggle={() => {}} onDelete={() => {}} />);
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
+
+  test('체크박스를 클릭하면 onToggle이 호출됩니다', async () => {
+    const onToggle = vitest.fn();
+    const { user } = renderWithSetup(
+      <TodoItem todo={mockTodo} onToggle={onToggle} onDelete={() => {}} />
     );
-    fireEvent.click(screen.getByText('삭제'));
-    expect(handleDelete).toHaveBeenCalledWith(1);
+
+    const checkbox = screen.getByRole('checkbox');
+    await user.click(checkbox);
+
+    expect(onToggle).toHaveBeenCalledWith(mockTodo.id);
+  });
+
+  test('삭제 버튼을 클릭하면 onDelete가 호출됩니다', async () => {
+    const onDelete = vitest.fn();
+    const { user } = renderWithSetup(
+      <TodoItem todo={mockTodo} onToggle={() => {}} onDelete={onDelete} />
+    );
+
+    const deleteButton = screen.getByRole('button', { name: /삭제/i });
+    await user.click(deleteButton);
+
+    expect(onDelete).toHaveBeenCalledWith(mockTodo.id);
   });
 }); 

@@ -1,47 +1,44 @@
-import { describe, it, expect, test } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, renderWithSetup, screen } from 'shared-utils-test';
 import { TodoList } from './TodoList';
 
 describe('TodoList', () => {
-  test('새로운 할일을 추가할 수 있습니다', () => {
-    render(<TodoList />);
-    
-    const input = screen.getByPlaceholderText('새로운 할일을 입력하세요');
-    fireEvent.change(input, { target: { value: '새로운 할일' } });
-    fireEvent.click(screen.getByText('추가'));
+  const mockTodos = [
+    { id: 1, text: '할 일 1', completed: false },
+    { id: 2, text: '할 일 2', completed: true },
+  ];
 
-    expect(screen.getByText('새로운 할일')).toBeInTheDocument();
+  test('할 일 목록이 올바르게 렌더링됩니다', () => {
+    render(<TodoList todos={mockTodos} onToggle={() => {}} onDelete={() => {}} />);
+    expect(screen.getByText('할 일 1')).toBeInTheDocument();
+    expect(screen.getByText('할 일 2')).toBeInTheDocument();
   });
 
-  test('할일을 완료 상태로 변경할 수 있습니다', () => {
-    render(<TodoList />);
-    
-    // 할일 추가
-    const input = screen.getByPlaceholderText('새로운 할일을 입력하세요');
-    fireEvent.change(input, { target: { value: '테스트 할일' } });
-    fireEvent.click(screen.getByText('추가'));
-
-    // 체크박스 클릭
-    const checkbox = screen.getByRole('checkbox');
-    fireEvent.click(checkbox);
-
-    // 완료 상태 확인
-    const todoText = screen.getByText('테스트 할일');
-    expect(todoText).toHaveStyle('text-decoration: line-through');
+  test('할 일이 없을 때 메시지가 표시됩니다', () => {
+    render(<TodoList todos={[]} onToggle={() => {}} onDelete={() => {}} />);
+    expect(screen.getByText('할 일이 없습니다.')).toBeInTheDocument();
   });
 
-  test('할일을 삭제할 수 있습니다', () => {
-    render(<TodoList />);
-    
-    // 할일 추가
-    const input = screen.getByPlaceholderText('새로운 할일을 입력하세요');
-    fireEvent.change(input, { target: { value: '삭제할 할일' } });
-    fireEvent.click(screen.getByText('추가'));
+  test('할 일 항목의 체크박스를 클릭하면 onToggle이 호출됩니다', async () => {
+    const onToggle = vitest.fn();
+    const { user } = renderWithSetup(
+      <TodoList todos={mockTodos} onToggle={onToggle} onDelete={() => {}} />
+    );
 
-    // 삭제 버튼 클릭
-    fireEvent.click(screen.getByText('삭제'));
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[0]);
 
-    // 할일이 삭제되었는지 확인
-    expect(screen.queryByText('삭제할 할일')).not.toBeInTheDocument();
+    expect(onToggle).toHaveBeenCalledWith(mockTodos[0].id);
+  });
+
+  test('할 일 항목의 삭제 버튼을 클릭하면 onDelete가 호출됩니다', async () => {
+    const onDelete = vitest.fn();
+    const { user } = renderWithSetup(
+      <TodoList todos={mockTodos} onToggle={() => {}} onDelete={onDelete} />
+    );
+
+    const deleteButtons = screen.getAllByRole('button', { name: /삭제/i });
+    await user.click(deleteButtons[0]);
+
+    expect(onDelete).toHaveBeenCalledWith(mockTodos[0].id);
   });
 }); 

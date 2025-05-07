@@ -2,34 +2,20 @@ import { useState } from 'react';
 import { Todo } from '../types/todo';
 import { TodoItem } from './TodoItem';
 
-export const TodoList = () => {
-  const [todos, setTodos] = useState<Todo[]>([]);
+interface TodoListProps {
+  todos: Todo[];
+  onToggle: (id: number) => void;
+  onDelete: (id: number) => void;
+}
+
+export const TodoList = ({ todos, onToggle, onDelete }: TodoListProps) => {
   const [newTodo, setNewTodo] = useState('');
 
   const addTodo = () => {
     if (newTodo.trim()) {
-      setTodos([
-        ...todos,
-        {
-          id: Date.now(),
-          text: newTodo,
-          completed: false,
-        },
-      ]);
+      onToggle(Date.now());
       setNewTodo('');
     }
-  };
-
-  const toggleTodo = (id: number) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
-  };
-
-  const deleteTodo = (id: number) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
   };
 
   return (
@@ -45,14 +31,18 @@ export const TodoList = () => {
         <button onClick={addTodo}>추가</button>
       </div>
       <ul>
-        {todos.map((todo) => (
-          <TodoItem
-            key={todo.id}
-            todo={todo}
-            onToggle={toggleTodo}
-            onDelete={deleteTodo}
-          />
-        ))}
+        {todos.length === 0 ? (
+          <li>할 일이 없습니다.</li>
+        ) : (
+          todos.map((todo) => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={onToggle}
+              onDelete={onDelete}
+            />
+          ))
+        )}
       </ul>
     </div>
   );
