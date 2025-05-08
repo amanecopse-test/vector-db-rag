@@ -28,7 +28,7 @@ def get_file_content(file_path: Path) -> str:
 def get_all_files(directory: Path, exclude_dirs: Optional[List[str]] = None) -> List[Path]:
     """디렉토리 내의 모든 파일을 재귀적으로 찾습니다."""
     if exclude_dirs is None:
-        exclude_dirs = ['.git', 'node_modules', '__pycache__', '.venv', 'coverage', '.vscode', '.idea']
+        exclude_dirs = ['.git', 'node_modules', '__pycache__', '.venv', 'coverage', '.vscode', '.idea', 'code_embedder']
     
     # 소스 코드 파일 확장자 목록
     source_extensions = {'.py', '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.scss', '.json', '.md'}
