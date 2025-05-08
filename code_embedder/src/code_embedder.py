@@ -8,6 +8,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import click
 import subprocess
 import os
+import chromadb
 
 def load_dotenv_file():
     """환경 변수 로드"""
@@ -27,7 +28,7 @@ def get_file_content(file_path: Path) -> str:
 def get_all_files(directory: Path, exclude_dirs: Optional[List[str]] = None) -> List[Path]:
     """디렉토리 내의 모든 파일을 재귀적으로 찾습니다."""
     if exclude_dirs is None:
-        exclude_dirs = ['.git', 'node_modules', '__pycache__', '.venv', 'coverage']
+        exclude_dirs = ['.git', 'node_modules', '__pycache__', '.venv', 'coverage', '.vscode', '.idea']
     
     # 소스 코드 파일 확장자 목록
     source_extensions = {'.py', '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.scss', '.json', '.md'}
@@ -68,7 +69,7 @@ def checkout_commit(commit_hash: str) -> None:
 
 def create_embeddings(directory: Path, persist_directory: str = "./chroma_db", commit_hash: Optional[str] = None):
     """디렉토리 내의 모든 파일을 임베딩하여 벡터 스토어에 저장합니다."""
-    if commit_hash is None:
+    if commit_hash is None or commit_hash == "":
         commit_hash = get_current_commit_hash()
     
     # 임베딩 모델 초기화
@@ -96,18 +97,17 @@ def create_embeddings(directory: Path, persist_directory: str = "./chroma_db", c
         print(f"기존 벡터 스토어를 로드했습니다. (커밋: {commit_hash})")
     except Exception:
         # 기존 컬렉션이 없는 경우 새로 생성
-        vectorstore = Chroma.from_texts(
-            texts=[""],  # 빈 텍스트로 초기화
-            embedding=embeddings,
+        vectorstore = Chroma(
             persist_directory=persist_directory,
+            embedding_function=embeddings,
             collection_name=collection_name
         )
-        # 빈 텍스트 삭제
-        vectorstore._collection.delete(where={})
         print(f"새로운 벡터 스토어를 생성했습니다. (커밋: {commit_hash})")
     
     # 파일 로드 및 처리
     files = get_all_files(directory)
+    total_files = len(files)
+    processed_files = 0
     
     for file_path in files:
         try:
@@ -116,6 +116,10 @@ def create_embeddings(directory: Path, persist_directory: str = "./chroma_db", c
             
             # 파일별로 청크 생성
             chunks = text_splitter.split_text(content)
+            if not chunks:  # 빈 파일이거나 청크가 생성되지 않은 경우
+                print(f"경고: {relative_path}에서 청크가 생성되지 않았습니다.")
+                continue
+                
             metadatas = [{
                 'source': str(relative_path),
                 'file_type': file_path.suffix,
@@ -125,8 +129,10 @@ def create_embeddings(directory: Path, persist_directory: str = "./chroma_db", c
             # 기존 문서 삭제 (같은 파일의 이전 버전)
             vectorstore._collection.delete(
                 where={
-                    "source": str(relative_path),
-                    "commit_hash": commit_hash
+                    "$and": [
+                        {"source": str(relative_path)},
+                        {"commit_hash": commit_hash}
+                    ]
                 }
             )
             
@@ -136,16 +142,22 @@ def create_embeddings(directory: Path, persist_directory: str = "./chroma_db", c
                 metadatas=metadatas
             )
             
-            print(f"처리 완료: {relative_path}")
+            processed_files += 1
+            print(f"처리 완료: {relative_path} ({processed_files}/{total_files})")
             
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
+            continue
     
-    print(f"임베딩이 {persist_directory}에 자동 저장되었습니다. (커밋: {commit_hash})")
+    if processed_files == 0:
+        print("경고: 처리된 파일이 없습니다.")
+    else:
+        print(f"총 {processed_files}개 파일이 처리되었습니다.")
+        print(f"임베딩이 {persist_directory}에 자동 저장되었습니다. (커밋: {commit_hash})")
 
 def search_code(query: str, persist_directory: str = "./chroma_db", commit_hash: Optional[str] = None, k: int = 5):
     """임베딩된 코드베이스에서 검색을 수행합니다."""
-    if commit_hash is None:
+    if commit_hash is None or commit_hash == "":
         commit_hash = get_current_commit_hash()
     
     # 임베딩 모델 초기화
@@ -158,15 +170,16 @@ def search_code(query: str, persist_directory: str = "./chroma_db", commit_hash:
     
     collection_name = f"code_embeddings_{commit_hash}"
     
+    # 벡터 스토어 존재 여부 확인
+    client = chromadb.PersistentClient(path=persist_directory)
     try:
-        # 벡터 스토어 로드
-        vectorstore = Chroma(
-            persist_directory=persist_directory,
-            embedding_function=embeddings,
-            collection_name=collection_name
-        )
+        collection = client.get_collection(collection_name)
+        count = collection.count()
     except Exception:
-        print(f"커밋 {commit_hash}에 대한 벡터 스토어가 없습니다. 임베딩을 시작합니다...")
+        count = 0
+    
+    if count == 0:
+        print(f"커밋 {commit_hash}에 대한 벡터 스토어가 비어있습니다. 임베딩을 시작합니다...")
         # 현재 커밋 해시 저장
         current_commit = get_current_commit_hash()
         try:
