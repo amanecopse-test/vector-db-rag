@@ -11,8 +11,22 @@
 
 ## 설치
 
+### uv 가상환경 시작 (먼저 uv 설치할 것)
+
 ```bash
-pip install -r requirements.txt
+uv venv --python 3.12
+```
+
+### uv 의존성 적용
+
+```bash
+uv sync
+```
+
+### uv 의존성 적용 (개발 환경 의존성 제외)
+
+```bash
+uv sync --no-dev
 ```
 
 ## 사용법
@@ -20,7 +34,7 @@ pip install -r requirements.txt
 ### 코드베이스 임베딩
 
 ```bash
-python -m code_embedder.src.code_embedder embed [OPTIONS]
+python {working_dir}/code_embedder/src/code_embedder.py embed [OPTIONS]
 ```
 
 옵션:
@@ -31,19 +45,19 @@ python -m code_embedder.src.code_embedder embed [OPTIONS]
 예시:
 ```bash
 # 현재 디렉토리의 코드베이스 임베딩
-python -m code_embedder.src.code_embedder embed
+python {working_dir}/code_embedder/src/code_embedder.py embed
 
 # 특정 디렉토리의 코드베이스 임베딩
-python -m code_embedder.src.code_embedder embed -d /path/to/code
+python {working_dir}/code_embedder/src/code_embedder.py embed -d /path/to/code
 
 # 특정 커밋의 코드베이스 임베딩
-python -m code_embedder.src.code_embedder embed -c abc123
+python {working_dir}/code_embedder/src/code_embedder.py embed -c abc123
 ```
 
 ### 코드베이스 검색
 
 ```bash
-python -m code_embedder.src.code_embedder search [OPTIONS] QUERY
+python {working_dir}/code_embedder/src/code_embedder.py search [OPTIONS] QUERY
 ```
 
 옵션:
@@ -54,13 +68,13 @@ python -m code_embedder.src.code_embedder search [OPTIONS] QUERY
 예시:
 ```bash
 # 현재 커밋의 코드베이스에서 검색
-python -m code_embedder.src.code_embedder search "함수 정의 방법"
+python {working_dir}/code_embedder/src/code_embedder.py search "함수 정의 방법"
 
 # 특정 커밋의 코드베이스에서 검색
-python -m code_embedder.src.code_embedder search -c abc123 "에러 처리"
+python {working_dir}/code_embedder/src/code_embedder.py search -c abc123 "에러 처리"
 
 # 검색 결과 수 지정
-python -m code_embedder.src.code_embedder search -k 10 "데이터베이스 연결"
+python {working_dir}/code_embedder/src/code_embedder.py search -k 10 "데이터베이스 연결"
 ```
 
 ## 지원하는 파일 형식
